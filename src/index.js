@@ -1,39 +1,68 @@
-import { registerBlockType } from '@wordpress/blocks';
-import { useBlockProps, RichText } from '@wordpress/block-editor';
+import { registerBlockType, createBlock, rawHandler } from '@wordpress/blocks';
+import {
+	useBlockProps,
+	useInnerBlocksProps,
+	InnerBlocks,
+	RichText,
+} from '@wordpress/block-editor';
+
+function migrateToList( attributes ) {
+	const { content } = attributes;
+	const list = document.createElement( 'ul' );
+	list.innerHTML = content;
+	const [ listBlock ] = rawHandler( { HTML: list.outerHTML } );
+	return [
+		{},
+		listBlock.innerBlocks,
+	];
+}
 
 registerBlockType( 'gutenberg/migrate-multiline-to-innerblocks', {
 	title: 'Multiline Deprecation Example',
-	attributes: {
-		content: {
-			type: 'string',
-			source: 'html',
-			selector: 'ul',
-			multiline: 'li',
+	deprecated: [
+		{
+			attributes: {
+				content: {
+					type: 'string',
+					source: 'html',
+					selector: 'ul',
+					multiline: 'li',
+				},
+			},
+			save: ( props ) => {
+				const { attributes } = props;
+				if ( RichText.isEmpty( attributes.content ) ) {
+					return null;
+				}
+				return (
+					<div { ...useBlockProps.save() }>
+						<RichText.Content
+							tagName="ul"
+							value={ attributes.content }
+						/>
+					</div>
+				);
+			},
+			migrate: migrateToList,
 		},
-	},
-	edit: ( props ) => {
-		const { attributes, setAttributes } = props;
+	],
+	edit: () => {
+		const innerBlocksProps = useInnerBlocksProps( useBlockProps(), {
+			template: [ [ 'core/list-item' ] ],
+			allowedBlocks: [ 'core/list-item' ],
+		} );
 		return (
 			<div { ...useBlockProps() }>
-				<RichText
-					tagName="ul"
-					multiline="li"
-					value={ attributes.content }
-					onChange={ ( newContent ) => {
-						setAttributes( { content: newContent } );
-					} }
-				/>
+				<ul { ...innerBlocksProps } />
 			</div>
 		);
 	},
-	save: ( props ) => {
-		const { attributes } = props;
-		if ( RichText.isEmpty( attributes.content ) ) {
-			return null;
-		}
+	save: () => {
 		return (
 			<div { ...useBlockProps.save() }>
-				<RichText.Content tagName="ul" value={ attributes.content } />
+				<ul>
+					<InnerBlocks.Content />
+				</ul>
 			</div>
 		);
 	},
