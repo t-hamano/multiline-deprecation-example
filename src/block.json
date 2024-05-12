@@ -1,0 +1,7 @@
+{
+	"apiVersion": 3,
+	"name": "gutenberg/migrate-multiline-to-innerblocks",
+	"version": "0.1.0",
+	"editorScript": "file:./index.js",
+	"style": "file:./style-index.css"
+}
